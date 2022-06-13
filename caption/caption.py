@@ -9,6 +9,7 @@ import aiohttp
 import urllib
 from typing import Union
 import base64
+import re
 
 MAX_SIZE = 8 * 1024 * 1024 # 8 MiB
 API_URL = 'https://hf.space/embed/OFA-Sys/OFA-Image_Caption/+/api/predict/'
@@ -69,24 +70,47 @@ class Caption(commands.Cog):
             data = await avatar.read()
             img = BytesIO(data)
             mimetype = Image.open(img).get_format_mimetype()
-        elif link: #linked image
-            path = urllib.parse.urlparse(link).path
-            if not any(path.lower().endswith(x) for x in self.imagetypes):
-                raise ImageFindError(
-                    f'That does not look like an image of a supported filetype. Make sure you provide a direct link.'
-                )
-            source = link
-            async with aiohttp.ClientSession() as session:
-                try:
-                    async with session.get(link) as response:
-                        r = await response.read()
-                        img = BytesIO(r)
-                        mimetype = Image.open(img).get_format_mimetype()
-                except (OSError, aiohttp.ClientError):
+        elif link: #linked image or emoji
+            custom_emojis = re.findall(r'<a?:\w+:(\d+)>', link)
+            if len(custom_emojis) > 0: #emoji
+                emoji = self.bot.get_emoji(custom_emojis[0])
+                if not emoji and ctx.guild: # try to get it from current guild
+                    for i_emoji in ctx.guild.emojis:
+                        if i_emoji.id == int(custom_emojis[0]):
+                            emoji = i_emoji
+                if emoji:
+                    asset = emoji.url_as(static_format="png")
+                    source = str(asset)
+                    data = await asset.read()
+                    img = BytesIO(data)
+                    mimetype = Image.open(img).get_format_mimetype()
+                else:
                     raise ImageFindError(
-                        'An image could not be found. Make sure you provide a direct link.'
+                        f'Failed to retrieve emoji.'
                     )
-        else: #attached image
+            else: #link
+                path = urllib.parse.urlparse(link).path
+                if not any(path.lower().endswith(x) for x in self.imagetypes):
+                    raise ImageFindError(
+                        f'That does not look like an image of a supported filetype. Make sure you provide a direct link.'
+                    )
+                source = link
+                async with aiohttp.ClientSession() as session:
+                    try:
+                        async with session.get(link) as response:
+                            r = await response.read()
+                            img = BytesIO(r)
+                            mimetype = Image.open(img).get_format_mimetype()
+                    except (OSError, aiohttp.ClientError):
+                        raise ImageFindError(
+                            'An image could not be found. Make sure you provide a direct link.'
+                        )
+        # elif ctx.message.stickers: # stickers apparently don't work with redbot
+        #     source = ctx.message.stickers[0].url
+        #     data = await ctx.message.stickers[0].read()
+        #     img = BytesIO(data)
+        #     mimetype = Image.open(img).get_format_mimetype()
+        elif ctx.message.attachments: #attached image
             path = urllib.parse.urlparse(ctx.message.attachments[0].url).path
             if not any(path.lower().endswith(x) for x in self.imagetypes):
                 raise ImageFindError(f'That does not look like an image of a supported filetype.')
