@@ -50,12 +50,20 @@ class Caption(commands.Cog):
         """Helper function to find an image."""
         if not ctx.message.attachments and not link:
             async for msg in ctx.channel.history(limit=10):
+                msg: discord.Message
                 for a in msg.attachments:
                     path = urllib.parse.urlparse(a.url).path
                     if (
                         any(path.lower().endswith(x) for x in self.imagetypes)
                     ):
                         link = a.url
+                        break
+                for m in msg.embeds:
+                    if m.type == 'image':
+                        link = m.url
+                        break
+                    if m.type == 'gifv':
+                        link = m.thumbnail.url
                         break
                 if link:
                     break
@@ -78,6 +86,7 @@ class Caption(commands.Cog):
                     for i_emoji in ctx.guild.emojis:
                         if i_emoji.id == int(custom_emojis[0]):
                             emoji = i_emoji
+                            break
                 if emoji:
                     asset = emoji.url_as(static_format="png")
                     source = str(asset)
@@ -90,14 +99,28 @@ class Caption(commands.Cog):
                     )
             else: #link
                 path = urllib.parse.urlparse(link).path
-                if not any(path.lower().endswith(x) for x in self.imagetypes):
-                    raise ImageFindError(
-                        f'That does not look like an image of a supported filetype. Make sure you provide a direct link.'
-                    )
                 source = link
+                for m in ctx.message.embeds: # if we have any embedded images, use those
+                    if m.type == 'image':
+                        source = m.url
+                        break
+                    if m.type == 'gifv':
+                        source = m.thumbnail.url
+                        break
+                #if not used_link: # if not, check for link extension TODO: HTTP headers
+                #    if not any(path.lower().endswith(x) for x in self.imagetypes):
+                #        raise ImageFindError(
+                #            f'That does not look like an image of a supported filetype. Make sure you provide a direct link.'
+                #        )
+                #    used_link = link
                 async with aiohttp.ClientSession() as session:
                     try:
-                        async with session.get(link) as response:
+                        async with session.get(source) as response:
+                            res_type = response.headers.get('Content-Type')
+                            if not res_type or not res_type.startswith('image/'):
+                                raise ImageFindError(
+                                    f'That does not look like an image of a supported filetype. Make sure you provide a direct link.'
+                                )
                             r = await response.read()
                             img = BytesIO(r)
                             mimetype = Image.open(img).get_format_mimetype()
