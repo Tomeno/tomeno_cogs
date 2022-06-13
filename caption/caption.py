@@ -127,8 +127,10 @@ class Caption(commands.Cog):
         return img, mimetype, source
     
     @commands.command(aliases=['cap'])
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.cooldown(1, 5, commands.BucketType.guild)
     @commands.bot_has_permissions(attach_files=True)
-    async def caption(self, ctx, link: Union[discord.Member, str]=None):
+    async def caption(self, ctx: commands.Context, link: Union[discord.Member, str]=None):
         """
         Captions images using AI.
         
@@ -138,6 +140,7 @@ class Caption(commands.Cog):
             try:
                 img, mimetype, source = await self._get_image(ctx, link)
             except ImageFindError as e:	
+                ctx.command.reset_cooldown(ctx)
                 return await ctx.send(e)
             try:
                 #task = functools.partial(self._caption, img, mimetype)
@@ -150,7 +153,7 @@ class Caption(commands.Cog):
             except Exception as e:
                 return await ctx.send('An error occurred while processing your image.')
             try:
-                caption, time = await asyncio.wait_for(task, timeout=20)
+                caption, time = await asyncio.wait_for(task, timeout=30)
             except asyncio.TimeoutError:
                 return await ctx.send('The image took too long to process.')
             try:
