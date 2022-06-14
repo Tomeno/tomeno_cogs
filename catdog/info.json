@@ -1,0 +1,11 @@
+{
+    "author" : ["Tomeno (Tomeno#8688)", "Flame442 (Flame#2941)"],
+    "install_msg" : "Use `[p]catdog` to tell you whether an image is a dog or a cat.",
+    "name" : "catdog",
+    "short" : "Classify images as cats or dogs using AI.",
+    "requirements" : ["pillow"],
+    "description" : "Classify images as cats or dogs using AI, specifically the dogcat model available at https://huggingface.co/spaces/gsgbills/dogcat. Code is based on the deepfry cog by Flame442.",
+    "tags" : ["ai", "dog", "cat", "image", "fun"],
+    "min_python_version": [3, 6, 0],
+    "end_user_data_statement": "Use of this cog is subject to the privacy policy of the API provider Hugging Face at https://huggingface.co/privacy."
+}
