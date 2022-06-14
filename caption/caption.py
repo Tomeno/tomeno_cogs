@@ -28,6 +28,7 @@ class Caption(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.imagetypes = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp']
+        self.mimetypes = ['image/png', 'image/jpg', 'image/jpeg', 'image/gif', 'image/webp', 'image/bmp']
     
     @staticmethod
     async def _caption(img, mimetype):
@@ -94,16 +95,10 @@ class Caption(commands.Cog):
             data = await avatar.read()
             img = BytesIO(data)
             mimetype = 'image/gif' if link.is_avatar_animated() else 'image/png'
-            mimetype = Image.open(img).get_format_mimetype()
         elif link: #linked image or emoji
             custom_emojis = re.findall(r'<a?:\w+:(\d+)>', link)
             if len(custom_emojis) > 0: #emoji
-                emoji = self.bot.get_emoji(custom_emojis[0])
-                if not emoji and ctx.guild: # try to get it from current guild
-                    for i_emoji in ctx.guild.emojis:
-                        if i_emoji.id == int(custom_emojis[0]):
-                            emoji = i_emoji
-                            break
+                emoji = self.bot.get_emoji(int(custom_emojis[0]))
                 if emoji:
                     asset = emoji.url_as(static_format="png")
                     source = str(asset)
@@ -124,13 +119,13 @@ class Caption(commands.Cog):
                         async with session.head(source) as response:
                             if response.status == 200:
                                 res_type = response.headers.get('Content-Type')
-                                if res_type and not res_type.startswith('image/'):
+                                if not res_type in self.mimetypes:
                                     raise ImageFindError(
                                         f'That does not look like an image of a supported filetype. Make sure you provide a direct link.'
                                     )
                         async with session.get(source) as response:
                             mimetype = response.headers.get('Content-Type')
-                            if not mimetype or not mimetype.startswith('image/'):
+                            if not mimetype or not mimetype in self.mimetypes:
                                 raise ImageFindError(
                                     f'That does not look like an image of a supported filetype. Make sure you provide a direct link.'
                                 )
@@ -146,16 +141,16 @@ class Caption(commands.Cog):
         #     img = BytesIO(data)
         #     mimetype = Image.open(img).get_format_mimetype()
         elif ctx.message.attachments: #attached image
-            path = urllib.parse.urlparse(ctx.message.attachments[0].url).path
-            if not any(path.lower().endswith(x) for x in self.imagetypes):
-                raise ImageFindError(f'That does not look like an image of a supported filetype.')
-            if ctx.message.attachments[0].size > MAX_SIZE:
-                raise ImageFindError('That image is too large.')
-            source = str(ctx.message.attachments[0].url)
+            attachment: discord.Attachment = ctx.message.attachments[0]
+            mimetype = attachment.content_type
+            if not mimetype in self.mimetypes:
+                raise ImageFindError(
+                    f'That does not look like an image of a supported filetype.'
+                )
+            source = str(attachment.url)
             img = BytesIO()
-            await ctx.message.attachments[0].save(img)
+            await attachment.save(img)
             img.seek(0)
-            mimetype = Image.open(img).get_format_mimetype()
         if img.getbuffer().nbytes > MAX_SIZE:
             raise ImageFindError('That image is too large.')
         img.seek(0)
