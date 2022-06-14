@@ -2,7 +2,6 @@
 import discord
 import aiohttp
 from redbot.core import commands
-from PIL import Image
 from io import BytesIO
 import asyncio
 import aiohttp

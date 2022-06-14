@@ -3,7 +3,7 @@
     "install_msg" : "Use `[p]caption` to generate a caption for an image.",
     "name" : "caption",
     "short" : "Caption images using AI.",
-    "requirements" : ["pillow"],
+    "requirements" : [],
     "description" : "Generate captions for images using AI, specifically the OFA model available at https://huggingface.co/spaces/OFA-Sys/OFA-Image_Caption. Code is based on the deepfry cog by Flame442.",
     "tags" : ["ai", "caption", "image", "fun"],
     "min_python_version": [3, 6, 0],
